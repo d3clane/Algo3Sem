@@ -1,77 +1,116 @@
 #include <cassert>
+#include <cstdint>
 #include <iostream>
 
-template <int size, unsigned long long MOD>
+template <uint32_t mod>
+struct ModuloRingUint64 {
+  uint64_t value;
+
+  ModuloRingUint64(uint64_t value = 0) : value(value) {}
+
+  ModuloRingUint64 operator*(const ModuloRingUint64& other) const {
+    return (value * other.value) % mod;
+  }
+
+  ModuloRingUint64 operator+(const ModuloRingUint64& other) const {
+    return (value + other.value) % mod;
+  }
+
+  ModuloRingUint64& operator+=(const ModuloRingUint64& other) {
+    return *this = (*this + other) % mod;
+  }
+
+  ModuloRingUint64 operator-(const ModuloRingUint64& other) const {
+    return (value - other.value) % mod;
+  }
+
+  operator uint64_t() { return value; }
+};
+
+template <typename T, size_t size>
 struct Matrix {
-  unsigned long long matrix[size][size];
+  T matrix[size][size];
 
   Matrix() {
     for (size_t i = 0; i < size; ++i) {
-      for (size_t j = 0; j < size; ++j) matrix[i][j] = 0;
+      for (size_t j = 0; j < size; ++j) {
+        matrix[i][j] = 0;
+      }
 
       matrix[i][i] = 1;
     }
   }
 
-  Matrix(unsigned long long matrix[size][size]) {
-    for (size_t i = 0; i < size; ++i)
-      for (size_t j = 0; j < size; ++j) this->matrix[i][j] = matrix[i][j];
+  Matrix(uint64_t matrix[size][size]) {
+    for (size_t i = 0; i < size; ++i) {
+      for (size_t j = 0; j < size; ++j) {
+        this->matrix[i][j] = matrix[i][j];
+      }
+    }
   }
 };
 
-template <int size, unsigned long long MOD>
-Matrix<size, MOD> operator*(const Matrix<size, MOD>& m1,
-                            const Matrix<size, MOD>& m2) {
-  Matrix<size, MOD> tmp;
+template <typename T, size_t size>
+Matrix<T, size> operator*(const Matrix<T, size>& m1,
+                          const Matrix<T, size>& m2) {
+  Matrix<T, size> res;
 
   for (size_t i = 0; i < size; ++i) {
     for (size_t j = 0; j < size; ++j) {
-      tmp.matrix[i][j] = 0;
+      res.matrix[i][j] = 0;
       for (size_t k = 0; k < size; ++k) {
-        tmp.matrix[i][j] += m1.matrix[i][k] * m2.matrix[k][j];
-        tmp.matrix[i][j] %= MOD;
+        res.matrix[i][j] += m1.matrix[i][k] * m2.matrix[k][j];
       }
     }
   }
 
-  return tmp;
+  return res;
 }
 
 template <typename T>
-T binPow(T a, unsigned long long n) {
-  if (n == 1) return a;
+T pow(const T value, const uint64_t n) {
+  T result{};
 
-  if (n % 2 == 0) {
-    T tmp = binPow(a, n / 2);
-    return tmp * tmp;
+  uint64_t power = n;
+  T val = value;
+
+  while (power != 0) {
+    if (power & 1) {
+      result = result * val;
+    }
+
+    val = val * val;
+    power >>= 1;
   }
 
-  return binPow(a, n - 1) * a;
+  return result;
 }
 
-unsigned long long getAnswer(unsigned long long n) {
+uint64_t getAnswer(uint64_t n) {
   if (n == 1) return 1;
 
-  const unsigned long long MOD = 1000003;
+  const uint64_t mod = 1000003;
   const size_t matrixSize = 5;
 
-  unsigned long long matrixArr[matrixSize][matrixSize] = {{1, 1, 1, 1, 1},
-                                                          {1, 0, 0, 0, 0},
-                                                          {0, 1, 0, 0, 0},
-                                                          {0, 0, 1, 0, 0},
-                                                          {0, 0, 0, 1, 0}};
+  using ringType = ModuloRingUint64<mod>;
 
-  Matrix<matrixSize, MOD> matrix(matrixArr);
+  Matrix<ringType, matrixSize> matrix(
+      (uint64_t[matrixSize][matrixSize]){{1, 1, 1, 1, 1},
+                                         {1, 0, 0, 0, 0},
+                                         {0, 1, 0, 0, 0},
+                                         {0, 0, 1, 0, 0},
+                                         {0, 0, 0, 1, 0}});
 
-  Matrix<matrixSize, MOD> resultMatrix = binPow(matrix, n - 1);
+  Matrix<ringType, matrixSize> resultMatrix = pow(matrix, n - 1);
+
   return resultMatrix.matrix[0][0];
 }
 
 int main() {
-  unsigned long long n = 0;
+  uint64_t n = 0;
   std::cin >> n;
 
-  unsigned long long ans = getAnswer(n);
+  uint64_t ans = getAnswer(n);
 
   std::cout << ans << "\n";
 }
