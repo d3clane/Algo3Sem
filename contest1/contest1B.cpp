@@ -89,7 +89,7 @@ T pow(const T value, const uint64_t n) {
 uint64_t getAnswer(uint64_t n) {
   if (n == 1) return 1;
 
-  const uint64_t mod = 1000003;
+  const uint32_t mod = 1000003;
   const size_t matrixSize = 5;
 
   using ringType = ModuloRingUint64<mod>;
