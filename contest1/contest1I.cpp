@@ -37,11 +37,10 @@ MaxAreaInfo getMaxNumberOfAreasAndPos(const std::vector<IthAreaInfo>& areas) {
   return maxArea;
 }
 
-AreasInfo getAreasInfo(const std::vector<int>& a, size_t n,
-                       bool sequenceCondition(int)) {
-  std::vector<IthAreaInfo> areas(n);
+AreasInfo getAreasInfo(const std::vector<int>& a, bool sequenceCondition(int)) {
+  std::vector<IthAreaInfo> areas(a.size());
 
-  for (size_t i = 1; i < n; ++i) {
+  for (size_t i = 1; i < a.size(); ++i) {
     for (size_t j = 0; j < i; ++j) {
       if (areas[i].areasGot < areas[j].areasGot + 1) {
         if (sequenceCondition(areas[j].areasGot) && a[j] > a[i]) {
@@ -61,9 +60,9 @@ AreasInfo getAreasInfo(const std::vector<int>& a, size_t n,
 bool isEven(int x) { return x % 2 == 0; }
 bool isOdd(int x) { return x % 2 == 1; }
 
-std::vector<int> getBestAreasIndexes(const std::vector<int>& a, size_t n) {
-  AreasInfo areaInfo1 = getAreasInfo(a, n, isEven);
-  AreasInfo areaInfo2 = getAreasInfo(a, n, isOdd);
+std::vector<int> getBestAreasIndexes(const std::vector<int>& a) {
+  AreasInfo areaInfo1 = getAreasInfo(a, isEven);
+  AreasInfo areaInfo2 = getAreasInfo(a, isOdd);
 
   if (areaInfo1.maxArea.maxNumberOfAreas < areaInfo2.maxArea.maxNumberOfAreas) {
     std::swap(areaInfo1, areaInfo2);
@@ -81,16 +80,24 @@ std::vector<int> getBestAreasIndexes(const std::vector<int>& a, size_t n) {
   return ans;
 }
 
-int main() {
+std::vector<int> readInput() {
   size_t n = 0;
   std::cin >> n;
 
   std::vector<int> a(n);
-
   std::copy_n(std::istream_iterator<int>(std::cin), n, a.begin());
+  return a;
+}
 
-  std::vector<int> ans = getBestAreasIndexes(a, n);
-
+void printAns(const std::vector<int>& ans) {
   std::cout << ans.size() << "\n";
   std::copy(ans.begin(), ans.end(), std::ostream_iterator<int>(std::cout, " "));
+}
+
+int main() {
+  std::vector<int> a = readInput();
+
+  std::vector<int> ans = getBestAreasIndexes(a);
+
+  printAns(ans);
 }
