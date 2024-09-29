@@ -10,6 +10,17 @@ struct MaxAreaInfo {
   int maxNumberOfAreasIndex = 0;
 };
 
+struct AreasInfo {
+  MaxAreaInfo maxArea;
+  std::vector<int> prevAreas;
+
+  AreasInfo(MaxAreaInfo maxAreaInit, const std::vector<int>& prevs)
+      : maxArea(maxAreaInit), prevAreas(prevs) {}
+
+  AreasInfo(MaxAreaInfo maxAreaInit, const std::vector<int>&& prevs)
+      : maxArea(maxAreaInit), prevAreas(prevs) {}
+};
+
 struct IthAreaInfo {
   int areasGot;
   int prevArea;
@@ -17,15 +28,18 @@ struct IthAreaInfo {
   IthAreaInfo() : areasGot(1), prevArea(-1) {}
 };
 
-struct AreasInfo {
-  MaxAreaInfo maxArea;
-  std::vector<IthAreaInfo> areas;
+inline std::vector<int> convertDpToPrevs(
+    const std::vector<IthAreaInfo>& areas) {
+  size_t areasSize = areas.size();
+  std::vector<int> prevs(areasSize);
+  for (size_t i = 0; i < areasSize; ++i) {
+    prevs[i] = areas[i].prevArea;
+  }
 
-  AreasInfo(MaxAreaInfo maxAreaInit, std::vector<IthAreaInfo> areasInit)
-      : maxArea(maxAreaInit), areas(areasInit) {}
-};
+  return prevs;
+}
 
-MaxAreaInfo getMaxNumberOfAreasAndPos(const std::vector<IthAreaInfo>& areas) {
+MaxAreaInfo findMaxArea(const std::vector<IthAreaInfo>& areas) {
   MaxAreaInfo maxArea;
   for (size_t i = 0; i < areas.size(); ++i) {
     if (maxArea.maxNumberOfAreas < areas[i].areasGot) {
@@ -37,7 +51,8 @@ MaxAreaInfo getMaxNumberOfAreasAndPos(const std::vector<IthAreaInfo>& areas) {
   return maxArea;
 }
 
-AreasInfo getAreasInfo(const std::vector<int>& a, bool sequenceCondition(int)) {
+AreasInfo findAreasPrevs(const std::vector<int>& a,
+                         bool sequenceCondition(int)) {
   std::vector<IthAreaInfo> areas(a.size());
 
   for (size_t i = 1; i < a.size(); ++i) {
@@ -54,30 +69,39 @@ AreasInfo getAreasInfo(const std::vector<int>& a, bool sequenceCondition(int)) {
     }
   }
 
-  return AreasInfo(getMaxNumberOfAreasAndPos(areas), areas);
+  return AreasInfo(findMaxArea(areas), convertDpToPrevs(areas));
 }
 
-bool isEven(int x) { return x % 2 == 0; }
-bool isOdd(int x) { return x % 2 == 1; }
-
-std::vector<int> getBestAreasIndexes(const std::vector<int>& a) {
-  AreasInfo areaInfo1 = getAreasInfo(a, isEven);
-  AreasInfo areaInfo2 = getAreasInfo(a, isOdd);
-
-  if (areaInfo1.maxArea.maxNumberOfAreas < areaInfo2.maxArea.maxNumberOfAreas) {
-    std::swap(areaInfo1, areaInfo2);
-  }
-
-  int i = areaInfo1.maxArea.maxNumberOfAreasIndex;
+std::vector<int> findBestAreasIndexes(const std::vector<int>& a,
+                                      const AreasInfo& areasInfo) {
+  int i = areasInfo.maxArea.maxNumberOfAreasIndex;
   std::vector<int> ans;
   while (i != -1) {
     ans.push_back(a[i]);
-    i = areaInfo1.areas[i].prevArea;
+    i = areasInfo.prevAreas[i];
   }
 
   std::reverse(ans.begin(), ans.end());
 
   return ans;
+}
+
+bool isEven(int x) { return x % 2 == 0; }
+bool isOdd(int x) { return x % 2 == 1; }
+
+AreasInfo findBestAreas(const std::vector<int>& a) {
+  AreasInfo areaInfo1 = findAreasPrevs(a, isEven);
+  AreasInfo areaInfo2 = findAreasPrevs(a, isOdd);
+
+  if (areaInfo1.maxArea.maxNumberOfAreas < areaInfo2.maxArea.maxNumberOfAreas) {
+    return areaInfo2;
+  }
+
+  return areaInfo1;
+}
+
+std::vector<int> findBestAreasIndexes(const std::vector<int>& a) {
+  return findBestAreasIndexes(a, findBestAreas(a));
 }
 
 std::vector<int> readInput() {
@@ -97,7 +121,7 @@ void printAns(const std::vector<int>& ans) {
 int main() {
   std::vector<int> a = readInput();
 
-  std::vector<int> ans = getBestAreasIndexes(a);
+  std::vector<int> ans = findBestAreasIndexes(a);
 
   printAns(ans);
 }
