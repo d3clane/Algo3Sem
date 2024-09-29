@@ -113,7 +113,7 @@ std::vector<int> readInput() {
   return a;
 }
 
-void printAns(const std::vector<int>& ans) {
+void printBestAreas(const std::vector<int>& ans) {
   std::cout << ans.size() << "\n";
   std::copy(ans.begin(), ans.end(), std::ostream_iterator<int>(std::cout, " "));
 }
@@ -123,5 +123,5 @@ int main() {
 
   std::vector<int> ans = findBestAreasIndexes(a);
 
-  printAns(ans);
+  printBestAreas(ans);
 }
