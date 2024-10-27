@@ -9,7 +9,7 @@ class Graph {
  public:
   explicit Graph(const std::vector<std::vector<int> >& graph);
 
-  uint32_t getEdgeMask(size_t vertex) const;
+  uint32_t getEdgesMask(size_t vertex) const;
 
   size_t size() const;
 };
@@ -29,7 +29,7 @@ Graph::Graph(const std::vector<std::vector<int> >& graph) {
 
 size_t Graph::size() const { return edgesMasks_.size(); }
 
-uint32_t Graph::getEdgeMask(size_t vertex) const { return edgesMasks_[vertex]; }
+uint32_t Graph::getEdgesMask(size_t vertex) const { return edgesMasks_[vertex]; }
 
 std::vector<std::vector<int> > readFriendsGraph() {
   size_t numberOfRobots = 0;
@@ -136,7 +136,7 @@ std::vector<bool> findIsCliqueArray(const Graph& graph) {
     // checking if [maxBitPos] vertex is connected with all other vertexes in
     // mask. If yes - it is clique only when mask without [maskBitPos] vertex is
     // clique
-    if ((mask & graph.getEdgeMask(maxBitPos)) == mask) {
+    if ((mask & graph.getEdgesMask(maxBitPos)) == mask) {
       isClique[mask] = isClique[mask & ~(1 << maxBitPos)];
     }
   }
@@ -157,7 +157,7 @@ std::vector<uint64_t> findNCliquesArray(const Graph& graph) {
       ++maxBitPos;
     }
 
-    // nCliques[mask & graph.getEdgeMask(maxBitPos) & ~(1 << maxBitPos)]:
+    // nCliques[mask & graph.getEdgesMask(maxBitPos) & ~(1 << maxBitPos)]:
     // Get all vertexes that can be achieved from [maxBitPos] vertex, find
     // nCliques on that vertexes, now connecting all this vertexes to
     // [maxBitPos] vertex - it still a clique because all of that vertexes are
@@ -167,7 +167,7 @@ std::vector<uint64_t> findNCliquesArray(const Graph& graph) {
     // [maxBitPos] vertex
     nCliques[mask] =
         nCliques[mask & ~(1 << maxBitPos)] +
-        nCliques[mask & graph.getEdgeMask(maxBitPos) & ~(1 << maxBitPos)];
+        nCliques[mask & graph.getEdgesMask(maxBitPos) & ~(1 << maxBitPos)];
   }
 
   return nCliques;
