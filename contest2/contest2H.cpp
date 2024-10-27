@@ -3,12 +3,35 @@
 #include <iostream>
 #include <vector>
 
-struct Input {
-  std::vector<std::vector<int> > friends;
-  size_t numberOfRobots;
+class Graph {
+  std::vector<uint32_t> edgesMasks_;
+
+ public:
+  explicit Graph(const std::vector<std::vector<int> >& graph);
+
+  uint32_t getEdgeMask(size_t vertex) const;
+
+  size_t size() const;
 };
 
-Input readInput() {
+Graph::Graph(const std::vector<std::vector<int> >& graph) {
+  size_t size = graph.size();
+  edgesMasks_.resize(size);
+
+  for (size_t i = 0; i < size; ++i) {
+    for (size_t j = 0; j < size; ++j) {
+      if (graph[i][j]) {
+        edgesMasks_[i] |= (1 << j);
+      }
+    }
+  }
+}
+
+size_t Graph::size() const { return edgesMasks_.size(); }
+
+uint32_t Graph::getEdgeMask(size_t vertex) const { return edgesMasks_[vertex]; }
+
+std::vector<std::vector<int> > readFriendsGraph() {
   size_t numberOfRobots = 0;
   std::cin >> numberOfRobots;
 
@@ -28,7 +51,7 @@ Input readInput() {
     friends[i][i] = 1;
   }
 
-  return {friends, numberOfRobots};
+  return friends;
 }
 
 std::vector<uint32_t> findFirstToSecondGraphEdges(
@@ -64,6 +87,9 @@ std::vector<uint32_t> findPossibleVertexesInSecondGraph(
       ++maxBitPos;
     }
 
+    // vertexes that are achieved from every vertex from mask except [maxBitPos] vertex BIT_AND with 
+    // all vertexes I can achieve from the [maxBitPos] vertex. 
+    // Results in all vertexes I can achieve from each vertex from mask
     possibleVertexesInSecondGraph[mask] =
         possibleVertexesInSecondGraph[mask & ~(1 << maxBitPos)] &
         firstToSecondGraphEdges[maxBitPos];
@@ -72,9 +98,9 @@ std::vector<uint32_t> findPossibleVertexesInSecondGraph(
   return possibleVertexesInSecondGraph;
 }
 
-std::pair<std::vector<std::vector<int> >, std::vector<std::vector<int> > >
-splitOnGraphs(std::vector<std::vector<int> >& friends, size_t firstGraphSize,
-              size_t secondGraphSize) {
+std::pair<Graph, Graph>
+splitOnGraphs(const std::vector<std::vector<int> >& friends,
+              size_t firstGraphSize, size_t secondGraphSize) {
   std::vector<std::vector<int> > firstGraph(firstGraphSize,
                                             std::vector<int>(firstGraphSize));
   std::vector<std::vector<int> > secondGraph(secondGraphSize,
@@ -92,30 +118,11 @@ splitOnGraphs(std::vector<std::vector<int> >& friends, size_t firstGraphSize,
     }
   }
 
-  return {firstGraph, secondGraph};
+  return {Graph(firstGraph), Graph(secondGraph)};
 }
 
-std::vector<uint32_t> findEdgesInMaskForm(
-    const std::vector<std::vector<int> >& graph) {
+std::vector<bool> findIsCliqueArray(const Graph& graph) {
   size_t size = graph.size();
-  std::vector<uint32_t> edgesInMaskForm(size, 0);
-
-  for (size_t i = 0; i < size; ++i) {
-    for (size_t j = 0; j < size; ++j) {
-      if (graph[i][j]) {
-        edgesInMaskForm[i] |= (1 << j);
-      }
-    }
-  }
-
-  return edgesInMaskForm;
-}
-
-std::vector<bool> findIsCliqueArray(
-    const std::vector<std::vector<int> >& graph) {
-  size_t size = graph.size();
-
-  std::vector<uint32_t> edgesInMaskForm = findEdgesInMaskForm(graph);
 
   std::vector<bool> isClique((1 << size), false);
   isClique[0] = true;
@@ -126,7 +133,9 @@ std::vector<bool> findIsCliqueArray(
       ++maxBitPos;
     }
 
-    if ((mask & edgesInMaskForm[maxBitPos]) == mask) {
+    // checking if [maxBitPos] vertex is connected with all other vertexes in mask. 
+    // If yes - it is clique only when mask without [maskBitPos] vertex is clique
+    if ((mask & graph.getEdgeMask(maxBitPos)) == mask) {
       isClique[mask] = isClique[mask & ~(1 << maxBitPos)];
     }
   }
@@ -134,32 +143,35 @@ std::vector<bool> findIsCliqueArray(
   return isClique;
 }
 
-std::vector<uint64_t> findKCliquesArray(
-    const std::vector<std::vector<int> >& graph) {
+std::vector<uint64_t> findNCliquesArray(const Graph& graph) {
   size_t size = graph.size();
 
-  std::vector<uint32_t> edgesInMaskForm = findEdgesInMaskForm(graph);
-
-  std::vector<uint64_t> kCliques((1 << size), 0);
-  kCliques[0] = 1;
+  std::vector<uint64_t> nCliques((1 << size), 0);
+  nCliques[0] = 1;
 
   size_t maxBitPos = 0;
 
-  for (size_t mask = 1; mask < kCliques.size(); ++mask) {
+  for (size_t mask = 1; mask < nCliques.size(); ++mask) {
     if ((mask & (1 << (maxBitPos + 1))) != 0) {
       ++maxBitPos;
     }
 
-    kCliques[mask] =
-        kCliques[mask & ~(1 << maxBitPos)] +
-        kCliques[mask & edgesInMaskForm[maxBitPos] & ~(1 << maxBitPos)];
+    // nCliques[mask & graph.getEdgeMask(maxBitPos) & ~(1 << maxBitPos)]: 
+    // Get all vertexes that can be achieved from [maxBitPos] vertex, find nCliques on that vertexes,
+    // now connecting all this vertexes to [maxBitPos] vertex - it still a clique because all of that vertexes
+    // are achieved from [maxBitPos]
+
+    // nCliques[mask & ~(1 << maxBitPos)] - simply all cliques without [maxBitPos] vertex
+    nCliques[mask] =
+        nCliques[mask & ~(1 << maxBitPos)] +
+        nCliques[mask & graph.getEdgeMask(maxBitPos) & ~(1 << maxBitPos)];
   }
 
-  return kCliques;
+  return nCliques;
 }
 
-uint64_t findEndDay(const Input& input) {
-  auto [friends, numberOfRobots] = input;
+uint64_t findEndDay(const std::vector<std::vector<int> >& friends) {
+  size_t numberOfRobots = friends.size();
 
   if (numberOfRobots == 1) {
     return 2;
@@ -168,6 +180,8 @@ uint64_t findEndDay(const Input& input) {
   size_t firstGraphSize = numberOfRobots / 2;
   size_t secondGraphSize = numberOfRobots - firstGraphSize;
 
+  // for each mask1 from graph1 finding such mask2 vertexes from second graph so that 
+  // from EACH vertex from mask1 I can achieve EACH vertex from mask2
   std::vector<uint32_t> possibleVertexesInSecondGraph =
       findPossibleVertexesInSecondGraph(friends, firstGraphSize,
                                         secondGraphSize);
@@ -179,25 +193,27 @@ uint64_t findEndDay(const Input& input) {
 
   std::vector<bool> isClique = findIsCliqueArray(firstGraph);
 
-  std::vector<uint64_t> kCliques = findKCliquesArray(secondGraph);
+  std::vector<uint64_t> nCliques = findNCliquesArray(secondGraph);
 
   assert(isClique.size() == possibleVertexesInSecondGraph.size());
-  assert(kCliques.size() == (1 << secondGraphSize));
+  assert(nCliques.size() == (1 << secondGraphSize));
 
   uint64_t endDay = 0;
   for (size_t mask = 0; mask < possibleVertexesInSecondGraph.size(); ++mask) {
     if (!isClique[mask]) continue;
 
-    endDay += kCliques[possibleVertexesInSecondGraph[mask]];
+    // for each clique from graph1 find number of cliques from second graph 
+    // so that their connection is still a clique.
+    endDay += nCliques[possibleVertexesInSecondGraph[mask]];
   }
 
   return endDay;
 }
 
 int main() {
-  auto input = readInput();
+  auto friendsGraph = readFriendsGraph();
 
-  uint64_t endDay = findEndDay(input);
+  uint64_t endDay = findEndDay(friendsGraph);
 
   std::cout << endDay << "\n";
 }
