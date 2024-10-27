@@ -1,13 +1,12 @@
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <iostream>
 #include <vector>
 
 class ModuloRingUint64 {
-  uint64_t value_;
-  uint32_t mod_;
-
  public:
   ModuloRingUint64(uint64_t initVal, uint32_t mod)
       : value_(initVal % mod), mod_(mod) {}
@@ -19,11 +18,15 @@ class ModuloRingUint64 {
 
   ModuloRingUint64& operator*=(const ModuloRingUint64& other);
   ModuloRingUint64& operator+=(const ModuloRingUint64& other);
+
+ private:
+  uint64_t value_;
+  uint32_t mod_;
 };
 
 struct DivisionByTwoResult;
 class DecimalBigInt {
-  std::vector<int> digits_;
+  std::vector<uint8_t> digits_;
 
  public:
   DecimalBigInt() = default;
@@ -46,7 +49,7 @@ DecimalBigInt::DecimalBigInt(const std::string& value) {
   digits_.resize(value.size());
 
   for (size_t i = 0; i < value.size(); ++i) {
-    digits_[i] = value[i] - '0';
+    digits_[i] = static_cast<uint8_t>(value[i]) - static_cast<uint8_t>('0');
   }
 
   std::reverse(digits_.begin(), digits_.end());
@@ -105,10 +108,10 @@ std::string DecimalBigInt::convertToBinary() const {
   return binary;
 }
 
-ModuloRingUint64 operator*(const ModuloRingUint64& a,
-                           const ModuloRingUint64& b) {
-  ModuloRingUint64 result = a;
-  return result *= b;
+ModuloRingUint64 operator*(const ModuloRingUint64& first,
+                           const ModuloRingUint64& second) {
+  ModuloRingUint64 result = first;
+  return result *= second;
 }
 
 ModuloRingUint64& ModuloRingUint64::operator*=(const ModuloRingUint64& other) {
@@ -129,8 +132,7 @@ ModuloRingUint64& ModuloRingUint64::operator+=(const ModuloRingUint64& other) {
 
 template <typename T>
 class Matrix {
-  std::vector<std::vector<T> > matrix_;
-
+ private:
   struct MatrixLine {
     std::vector<T>& matrixLine;
 
@@ -147,7 +149,10 @@ class Matrix {
   size_t size() const { return matrix_.size(); }
 
   template <typename U>
-  friend Matrix<U> operator*(const Matrix<U>& a, const Matrix<U>& b);
+  friend Matrix<U> operator*(const Matrix<U>& first, const Matrix<U>& second);
+
+ private:
+  std::vector<std::vector<T> > matrix_;
 };
 
 template <typename T>
@@ -156,15 +161,15 @@ Matrix<T>::Matrix(size_t size, T initVal) {
 }
 
 template <typename T>
-Matrix<T> operator*(const Matrix<T>& a, const Matrix<T>& b) {
-  Matrix<T> res = a;
+Matrix<T> operator*(const Matrix<T>& first, const Matrix<T>& second) {
+  Matrix<T> res = first;
 
   size_t size = res.size();
   for (size_t i = 0; i < size; ++i) {
     for (size_t j = 0; j < size; ++j) {
-      res.matrix_[i][j] = a.matrix_[i][0] * b.matrix_[0][j];
+      res.matrix_[i][j] = first.matrix_[i][0] * second.matrix_[0][j];
       for (size_t k = 1; k < size; ++k) {
-        res.matrix_[i][j] += a.matrix_[i][k] * b.matrix_[k][j];
+        res.matrix_[i][j] += first.matrix_[i][k] * second.matrix_[k][j];
       }
     }
   }
@@ -198,18 +203,18 @@ T pow(const T& value, const T& neutralValue, const std::string& binaryPower) {
 
 Matrix<ModuloRingUint64> FillRecurrentMatrix(const uint32_t width,
                                              const uint32_t mod) {
-  int nProfiles = (1 << width);
+  uint32_t nProfiles = (1 << width);
 
   Matrix<ModuloRingUint64> profileStep(nProfiles, ModuloRingUint64{1, mod});
 
-  for (int profile1 = 0; profile1 < nProfiles; profile1++) {
-    for (int profile2 = 0; profile2 < nProfiles; profile2++) {
-      for (int mask = 1; mask < nProfiles / 2; mask *= 2) {
-        int squareTopLeft = (profile1 & mask) ? 1 : 0;
-        int squareTopRight = (profile2 & mask) ? 1 : 0;
-        int newMask = mask * 2;
-        int squareBottomLeft = (profile1 & newMask) ? 1 : 0;
-        int squareBottomRight = (profile2 & newMask) ? 1 : 0;
+  for (uint32_t profile1 = 0; profile1 < nProfiles; profile1++) {
+    for (uint32_t profile2 = 0; profile2 < nProfiles; profile2++) {
+      for (uint32_t mask = 1; mask < nProfiles / 2; mask *= 2) {
+        uint32_t squareTopLeft = (profile1 & mask) ? 1 : 0;
+        uint32_t squareTopRight = (profile2 & mask) ? 1 : 0;
+        uint32_t newMask = mask * 2;
+        uint32_t squareBottomLeft = (profile1 & newMask) ? 1 : 0;
+        uint32_t squareBottomRight = (profile2 & newMask) ? 1 : 0;
 
         if (squareTopLeft == squareTopRight &&
             squareTopRight == squareBottomLeft &&
@@ -234,8 +239,8 @@ Matrix<ModuloRingUint64> createIdentityMatrix(const size_t size,
   return res;
 }
 
-uint64_t getAnswer(const DecimalBigInt& height, const uint32_t width,
-                   const uint32_t mod) {
+uint64_t getInfluencingOptionsAmount(const DecimalBigInt& height,
+                                     const uint32_t width, const uint32_t mod) {
   using RingType = ModuloRingUint64;
 
   Matrix<RingType> recurrentMatrix = FillRecurrentMatrix(width, mod);
@@ -271,7 +276,9 @@ int main() {
   std::cin >> n;
   std::cin >> m >> mod;
 
-  uint64_t answer = getAnswer(n, m, mod);
+  uint64_t influencingOptionsAmount = getInfluencingOptionsAmount(n, m, mod);
 
-  std::cout << answer << "\n";
+  std::cout << influencingOptionsAmount << "\n";
+
+  return 0;
 }
