@@ -87,9 +87,9 @@ std::vector<uint32_t> findPossibleVertexesInSecondGraph(
       ++maxBitPos;
     }
 
-    // vertexes that are achieved from every vertex from mask except [maxBitPos] vertex BIT_AND with 
-    // all vertexes I can achieve from the [maxBitPos] vertex. 
-    // Results in all vertexes I can achieve from each vertex from mask
+    // vertexes that are achieved from every vertex from mask except [maxBitPos]
+    // vertex BIT_AND with all vertexes I can achieve from the [maxBitPos]
+    // vertex. Results in all vertexes I can achieve from each vertex from mask
     possibleVertexesInSecondGraph[mask] =
         possibleVertexesInSecondGraph[mask & ~(1 << maxBitPos)] &
         firstToSecondGraphEdges[maxBitPos];
@@ -98,9 +98,9 @@ std::vector<uint32_t> findPossibleVertexesInSecondGraph(
   return possibleVertexesInSecondGraph;
 }
 
-std::pair<Graph, Graph>
-splitOnGraphs(const std::vector<std::vector<int> >& friends,
-              size_t firstGraphSize, size_t secondGraphSize) {
+std::pair<Graph, Graph> splitOnGraphs(
+    const std::vector<std::vector<int> >& friends, size_t firstGraphSize,
+    size_t secondGraphSize) {
   std::vector<std::vector<int> > firstGraph(firstGraphSize,
                                             std::vector<int>(firstGraphSize));
   std::vector<std::vector<int> > secondGraph(secondGraphSize,
@@ -133,8 +133,9 @@ std::vector<bool> findIsCliqueArray(const Graph& graph) {
       ++maxBitPos;
     }
 
-    // checking if [maxBitPos] vertex is connected with all other vertexes in mask. 
-    // If yes - it is clique only when mask without [maskBitPos] vertex is clique
+    // checking if [maxBitPos] vertex is connected with all other vertexes in
+    // mask. If yes - it is clique only when mask without [maskBitPos] vertex is
+    // clique
     if ((mask & graph.getEdgeMask(maxBitPos)) == mask) {
       isClique[mask] = isClique[mask & ~(1 << maxBitPos)];
     }
@@ -156,12 +157,14 @@ std::vector<uint64_t> findNCliquesArray(const Graph& graph) {
       ++maxBitPos;
     }
 
-    // nCliques[mask & graph.getEdgeMask(maxBitPos) & ~(1 << maxBitPos)]: 
-    // Get all vertexes that can be achieved from [maxBitPos] vertex, find nCliques on that vertexes,
-    // now connecting all this vertexes to [maxBitPos] vertex - it still a clique because all of that vertexes
-    // are achieved from [maxBitPos]
+    // nCliques[mask & graph.getEdgeMask(maxBitPos) & ~(1 << maxBitPos)]:
+    // Get all vertexes that can be achieved from [maxBitPos] vertex, find
+    // nCliques on that vertexes, now connecting all this vertexes to
+    // [maxBitPos] vertex - it still a clique because all of that vertexes are
+    // achieved from [maxBitPos]
 
-    // nCliques[mask & ~(1 << maxBitPos)] - simply all cliques without [maxBitPos] vertex
+    // nCliques[mask & ~(1 << maxBitPos)] - simply all cliques without
+    // [maxBitPos] vertex
     nCliques[mask] =
         nCliques[mask & ~(1 << maxBitPos)] +
         nCliques[mask & graph.getEdgeMask(maxBitPos) & ~(1 << maxBitPos)];
@@ -180,8 +183,8 @@ uint64_t findEndDay(const std::vector<std::vector<int> >& friends) {
   size_t firstGraphSize = numberOfRobots / 2;
   size_t secondGraphSize = numberOfRobots - firstGraphSize;
 
-  // for each mask1 from graph1 finding such mask2 vertexes from second graph so that 
-  // from EACH vertex from mask1 I can achieve EACH vertex from mask2
+  // for each mask1 from graph1 finding such mask2 vertexes from second graph so
+  // that from EACH vertex from mask1 I can achieve EACH vertex from mask2
   std::vector<uint32_t> possibleVertexesInSecondGraph =
       findPossibleVertexesInSecondGraph(friends, firstGraphSize,
                                         secondGraphSize);
@@ -202,7 +205,7 @@ uint64_t findEndDay(const std::vector<std::vector<int> >& friends) {
   for (size_t mask = 0; mask < possibleVertexesInSecondGraph.size(); ++mask) {
     if (!isClique[mask]) continue;
 
-    // for each clique from graph1 find number of cliques from second graph 
+    // for each clique from graph1 find number of cliques from second graph
     // so that their connection is still a clique.
     endDay += nCliques[possibleVertexesInSecondGraph[mask]];
   }
