@@ -30,11 +30,12 @@ class LowerEnvelope {
   int getY(int x) const;
 };
 
-int findCrossX(const Line& l1, const Line& l2) {
-  assert(l1.slopeFactor != l2.slopeFactor);
+int findCrossX(const Line& line1, const Line& line2) {
+  assert(line1.slopeFactor != line2.slopeFactor);
 
-  int x = (l2.yOffset - l1.yOffset) / (l1.slopeFactor - l2.slopeFactor);
-  if (l2.yOffset - l1.yOffset < 0) --x;
+  int x =
+      (line2.yOffset - line1.yOffset) / (line1.slopeFactor - line2.slopeFactor);
+  if (line2.yOffset - line1.yOffset < 0) --x;
 
   return x;
 }
@@ -59,10 +60,11 @@ void LowerEnvelope::addLine(const Line& line) {
 
   static const int infinitelyRemotePointX = -1e9;
 
-  if (lines_.empty())
+  if (lines_.empty()) {
     linesIntersectionsX_.push_back(infinitelyRemotePointX);
-  else
+  } else {
     linesIntersectionsX_.push_back(findCrossX(lines_.back(), line));
+  }
 
   lines_.push_back(line);
 }
@@ -75,18 +77,19 @@ int LowerEnvelope::getY(int x) const {
   return lines_[lineIndex].getY(x);
 }
 
-int findMinSquareLens(const int n, const int k) {
-  if (k == 0) {
+int findMinSquareLens(const size_t nPoints, const size_t nSegments) {
+  if (nSegments == 0) {
     return 0;
   }
 
   static const int infDpVal = 1e9;
 
-  std::vector<std::vector<int> > dp(n + 1, std::vector<int>(k + 1, infDpVal));
+  std::vector<std::vector<int> > dp(nPoints + 1,
+                                    std::vector<int>(nSegments + 1, infDpVal));
 
   LowerEnvelope envelope;
 
-  for (int i = 0; i <= k; ++i) {
+  for (int i = 0; i <= nSegments; ++i) {
     dp[0][i] = 0;
   }
 
@@ -94,29 +97,30 @@ int findMinSquareLens(const int n, const int k) {
 
   envelope.addLine(zeroPointsLine);
 
-  for (int numberOfSegments = 1; numberOfSegments <= k; ++numberOfSegments) {
+  for (size_t nUsedSegments = 1; nUsedSegments <= nSegments; ++nUsedSegments) {
     LowerEnvelope newEnvelope;
     newEnvelope.addLine(zeroPointsLine);
 
-    for (int pointId = 1; pointId <= n; ++pointId) {
-      dp[pointId][numberOfSegments] =
-          envelope.getY(pointId) + pointId * pointId;
+    for (size_t pointId = 1; pointId <= nPoints; ++pointId) {
+      dp[pointId][nUsedSegments] = envelope.getY(pointId) + pointId * pointId;
       newEnvelope.addLine(
           Line{-2 * (pointId + 1),
-               dp[pointId][numberOfSegments] + (pointId + 1) * (pointId + 1)});
+               dp[pointId][nUsedSegments] + (pointId + 1) * (pointId + 1)});
     }
 
     envelope = newEnvelope;
   }
 
-  return dp[n][k];
+  return dp[nPoints][nSegments];
 }
 
 int main() {
-  int n = 0, k = 0;
-  std::cin >> n >> k;
+  size_t nPoints = 0, nSegments = 0;
+  std::cin >> nPoints >> nSegments;
 
-  int answer = findMinSquareLens(n, k);
+  int minSquareLens = findMinSquareLens(nPoints, nSegments);
 
-  std::cout << answer << "\n";
+  std::cout << minSquareLens << "\n";
+
+  return 0;
 }
