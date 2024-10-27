@@ -219,4 +219,6 @@ int main() {
   uint64_t endDay = findEndDay(friendsGraph);
 
   std::cout << endDay << "\n";
+
+  return 0;
 }
