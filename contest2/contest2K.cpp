@@ -19,15 +19,16 @@ struct Line {
 };
 
 class LowerEnvelope {
-  std::vector<Line> lines_;
-  std::vector<int> linesIntersectionsX_;
-
  public:
   LowerEnvelope();
 
   void addLine(const Line& line);
 
   int getY(int x) const;
+
+ private:
+  std::vector<Line> lines_;
+  std::vector<int> linesIntersectionsX_;
 };
 
 int findCrossX(const Line& line1, const Line& line2) {
