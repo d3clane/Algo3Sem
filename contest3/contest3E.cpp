@@ -6,23 +6,25 @@
 #include <set>
 #include <vector>
 
-std::vector<std::vector<int> > readGraph() {
-  int nVertexes = 0, nEdges = 0;
+std::vector<std::vector<size_t> > readGraph() {
+  size_t nVertexes = 0, nEdges = 0;
   std::cin >> nVertexes >> nEdges;
 
-  std::vector<std::vector<int> > graph(nVertexes);
+  std::vector<std::vector<size_t> > graph(nVertexes);
   for (size_t i = 0; i < nEdges; ++i) {
-    int u = 0, v = 0;
-    std::cin >> u >> v;
-    --u, --v;
-    graph[u].push_back(v);
+    size_t from = 0, to = 0;
+    std::cin >> from >> to;
+    --from, --to;
+    graph[from].push_back(to);
   }
 
   return graph;
 }
 
-void findTopologicalSort(int vertex, const std::vector<std::vector<int> >& graph,
-                        std::vector<bool>& used, std::vector<int>& topSort) {
+void findTopologicalSort(size_t vertex,
+                         const std::vector<std::vector<size_t> >& graph,
+                         std::vector<bool>& used,
+                         std::vector<size_t>& topSort) {
   used[vertex] = true;
 
   for (auto& to : graph[vertex]) {
@@ -34,10 +36,10 @@ void findTopologicalSort(int vertex, const std::vector<std::vector<int> >& graph
   topSort.push_back(vertex);
 }
 
-std::vector<int> findTopologicalSort(
-    const std::vector<std::vector<int> >& graph) {
+std::vector<size_t> findTopologicalSort(
+    const std::vector<std::vector<size_t> >& graph) {
   std::vector<bool> used(graph.size(), false);
-  std::vector<int> topSort;
+  std::vector<size_t> topSort;
 
   for (size_t i = 0; i < graph.size(); ++i) {
     if (!used[i]) {
@@ -49,10 +51,10 @@ std::vector<int> findTopologicalSort(
   return topSort;
 }
 
-std::vector<std::vector<int> > reverseGraph(
-    const std::vector<std::vector<int> >& graph) {
-  std::vector<std::vector<int> > reverseGraph(graph.size());
-  for (int v = 0; v < graph.size(); ++v) {
+std::vector<std::vector<size_t> > reverseGraph(
+    const std::vector<std::vector<size_t> >& graph) {
+  std::vector<std::vector<size_t> > reverseGraph(graph.size());
+  for (size_t v = 0; v < static_cast<size_t>(graph.size()); ++v) {
     for (auto& to : graph[v]) {
       reverseGraph[to].push_back(v);
     }
@@ -61,8 +63,9 @@ std::vector<std::vector<int> > reverseGraph(
   return reverseGraph;
 }
 
-void findComponent(int vertex, const std::vector<std::vector<int> >& graph,
-                  std::vector<bool>& used, std::vector<int>& component) {
+void findComponent(size_t vertex,
+                   const std::vector<std::vector<size_t> >& graph,
+                   std::vector<bool>& used, std::vector<size_t>& component) {
   used[vertex] = true;
 
   for (auto& to : graph[vertex]) {
@@ -74,18 +77,18 @@ void findComponent(int vertex, const std::vector<std::vector<int> >& graph,
   component.push_back(vertex);
 }
 
-std::vector<std::vector<int> > findComponents(
-    const std::vector<std::vector<int> >& graph) {
+std::vector<std::vector<size_t> > findComponents(
+    const std::vector<std::vector<size_t> >& graph) {
   std::vector<bool> used(graph.size(), false);
-  std::vector<std::vector<int> > components;
-  std::vector<std::vector<int> > reversedGraph = reverseGraph(graph);
+  std::vector<std::vector<size_t> > components;
+  std::vector<std::vector<size_t> > reversedGraph = reverseGraph(graph);
 
-  std::vector<int> topSort = findTopologicalSort(graph);
+  std::vector<size_t> topSort = findTopologicalSort(graph);
 
   for (size_t i = 0; i < topSort.size(); ++i) {
     if (used[topSort[i]]) continue;
 
-    std::vector<int> component;
+    std::vector<size_t> component;
     findComponent(topSort[i], reversedGraph, used, component);
     components.push_back(component);
   }
@@ -93,9 +96,9 @@ std::vector<std::vector<int> > findComponents(
   return components;
 }
 
-void printComponents(const std::vector<std::vector<int> >& graph,
-                     const std::vector<std::vector<int> >& components) {
-  std::vector<int> vertexesComponentsIds(graph.size(), -1);
+void printComponents(const std::vector<std::vector<size_t> >& graph,
+                     const std::vector<std::vector<size_t> >& components) {
+  std::vector<size_t> vertexesComponentsIds(graph.size(), -1);
 
   for (size_t i = 0; i < components.size(); ++i) {
     for (auto& vertex : components[i]) {
@@ -111,9 +114,9 @@ void printComponents(const std::vector<std::vector<int> >& graph,
 }
 
 int main() {
-  std::vector<std::vector<int> > graph = readGraph();
+  std::vector<std::vector<size_t> > graph = readGraph();
 
-  std::vector<std::vector<int> > components = findComponents(graph);
+  std::vector<std::vector<size_t> > components = findComponents(graph);
 
   printComponents(graph, components);
 }
