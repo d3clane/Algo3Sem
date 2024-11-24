@@ -8,14 +8,15 @@
 #include <queue>
 #include <set>
 #include <vector>
+#include <cstdint>
 
 class GameState {
  public:
   static const size_t size_ = 3;
 
   struct Position {
-    int row;
-    int col;
+    size_t row;
+    size_t col;
   };
 
   using InitGameState = const int (&)[size_][size_];
@@ -23,7 +24,7 @@ class GameState {
   GameState(InitGameState gameState);
 
   void swapZeroElement(Position other);
-  int64_t encode() const;
+  uint64_t encode() const;
 
   Position zeroPos() const;
 
@@ -34,8 +35,7 @@ class GameState {
 };
 
 void GameState::swapZeroElement(GameState::Position other) {
-  if (other.row < 0 || other.row >= size_ || other.col < 0 ||
-      other.col >= size_) {
+  if (other.row >= size_ || other.col >= size_) {
     return;
   }
 
@@ -49,7 +49,7 @@ GameState::GameState(InitGameState gameState) {
   for (size_t i = 0; i < size_; ++i) {
     for (size_t j = 0; j < size_; ++j) {
       if (state_[i][j] == 0) {
-        zeroPos_ = {(int)i, (int)j};
+        zeroPos_ = GameState::Position{i, j};
         break;
       }
     }
@@ -58,11 +58,11 @@ GameState::GameState(InitGameState gameState) {
 
 GameState::Position GameState::zeroPos() const { return zeroPos_; }
 
-int64_t GameState::encode() const {
-  int64_t result = 0;
+uint64_t GameState::encode() const {
+  uint64_t result = 0;
 
   const int* state = &state_[0][0];
-  for (int i = 0; i < size_ * size_; ++i) {
+  for (size_t i = 0; i < size_ * size_; ++i) {
     result = result * 10 + state[i];
   }
 
@@ -75,18 +75,21 @@ struct PathToSolution {
 };
 
 struct Moves {
-  int dx, dy;
+  int dx;
+  int dy;
 };
 
+static const uint64_t invalidEncoding = 0;
+
 struct PrevState {
-  int64_t stateEncoding;
+  uint64_t stateEncoding = invalidEncoding;
   char move;
 };
 
 struct VertexInfo {
   int distance = -1;
 
-  PrevState prevState = {-1, -1};
+  PrevState prevState = {invalidEncoding, 0};
 };
 
 char moveToChar(Moves move) {
@@ -101,35 +104,35 @@ char moveToChar(Moves move) {
   }
 }
 
-std::map<int64_t, VertexInfo> bfs(GameState begin, GameState end) {
-  int64_t endEncoding = end.encode();
-  int64_t beginEncoding = begin.encode();
+std::map<uint64_t, VertexInfo> bfs(GameState begin, GameState end) {
+  uint64_t endEncoding = end.encode();
+  uint64_t beginEncoding = begin.encode();
 
   std::queue<GameState> statesQueue;
   statesQueue.push(begin);
 
-  std::map<int64_t, VertexInfo> vertexInfo;
+  std::map<uint64_t, VertexInfo> vertexInfo;
 
-  vertexInfo[beginEncoding] = {0, {-1, -1}};
+  vertexInfo[beginEncoding] = VertexInfo{0, PrevState{invalidEncoding, 0}};
 
   std::vector<Moves> moves = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
 
   while (!statesQueue.empty()) {
-    auto currentState = statesQueue.front();
+    GameState currentState = statesQueue.front();
     statesQueue.pop();
 
-    int64_t currentStateEncoding = currentState.encode();
+    uint64_t currentStateEncoding = currentState.encode();
     if (currentStateEncoding == endEncoding) {
       break;
     }
 
-    auto currentStateInfo = vertexInfo[currentStateEncoding];
+    VertexInfo currentStateInfo = vertexInfo[currentStateEncoding];
 
-    for (auto move : moves) {
+    for (Moves move : moves) {
       GameState nextState = currentState;
       nextState.swapZeroElement({currentState.zeroPos().row + move.dx,
                                  currentState.zeroPos().col + move.dy});
-      int64_t nextStateEncoding = nextState.encode();
+      uint64_t nextStateEncoding = nextState.encode();
 
       auto it = vertexInfo.find(nextStateEncoding);
       if (it == vertexInfo.end()) {
@@ -152,18 +155,18 @@ PathToSolution findPath(GameState begin) {
 
   GameState end({{1, 2, 3}, {4, 5, 6}, {7, 8, 0}});
 
-  auto vertexInfo = bfs(begin, end);
+  auto vertexInfoMap = bfs(begin, end);
 
-  auto it = vertexInfo.find(end.encode());
-  if (it == vertexInfo.end()) {
+  auto it = vertexInfoMap.find(end.encode());
+  if (it == vertexInfoMap.end()) {
     result.pathExist = false;
     return result;
   }
 
   result.pathExist = true;
 
-  for (auto state = it->second.prevState; state.stateEncoding != -1;
-       state = vertexInfo[state.stateEncoding].prevState) {
+  for (auto state = it->second.prevState; state.stateEncoding != invalidEncoding;
+       state = vertexInfoMap[state.stateEncoding].prevState) {
     result.path += state.move;
   }
 
