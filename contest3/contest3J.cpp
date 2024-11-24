@@ -2,13 +2,13 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <iostream>
 #include <iterator>
 #include <map>
 #include <queue>
 #include <set>
 #include <vector>
-#include <cstdint>
 
 class GameState {
  public:
@@ -165,7 +165,8 @@ PathToSolution findPath(GameState begin) {
 
   result.pathExist = true;
 
-  for (auto state = it->second.prevState; state.stateEncoding != invalidEncoding;
+  for (auto state = it->second.prevState;
+       state.stateEncoding != invalidEncoding;
        state = vertexInfoMap[state.stateEncoding].prevState) {
     result.path += state.move;
   }
