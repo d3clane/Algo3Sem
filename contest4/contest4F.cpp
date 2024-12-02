@@ -14,11 +14,13 @@ class CondenseTree {
   CondenseTree(size_t numberOfVertexes, const std::vector<Edge>& edges,
                const std::vector<size_t>& vertexMapping);
 
+  void buildLca();
+
   unsigned countSameEdgesOnWay(size_t vertex1, size_t vertex2,
                                size_t vertexTo) const;
 
  private:
-  void initLcaJumps(size_t vertex, size_t parent, unsigned& timer);
+  void buildLca(size_t vertex, size_t parent, unsigned& timer);
   bool isAncestor(size_t ancestor, size_t vertex) const;
   unsigned findDistance(size_t vertexFrom, size_t vertexTo) const;
   size_t findLca(size_t vertex1, size_t vertex2) const;
@@ -50,11 +52,13 @@ CondenseTree::CondenseTree(size_t numberOfVertexes,
     tree_[edges[i].u].push_back(edges[i].v);
     tree_[edges[i].v].push_back(edges[i].u);
   }
+}
 
+void CondenseTree::buildLca() { 
   lcaJumpVertexTo_[0][0] = 0;
 
   unsigned timer = 0;
-  initLcaJumps(0, numberOfVertexes, timer);
+  buildLca(0, 0, timer); 
 }
 
 unsigned CondenseTree::countSameEdgesOnWay(size_t vertex1, size_t vertex2,
@@ -125,7 +129,7 @@ bool CondenseTree::isAncestor(size_t ancestor, size_t vertex) const {
          timeOut_[ancestor] >= timeOut_[vertex];
 }
 
-void CondenseTree::initLcaJumps(size_t vertex, size_t parent, unsigned& timer) {
+void CondenseTree::buildLca(size_t vertex, size_t parent, unsigned& timer) {
   for (size_t jumpLen = 1; jumpLen < maxLogValue_; ++jumpLen) {
     size_t prevJumpVertex = lcaJumpVertexTo_[vertex][jumpLen - 1];
     lcaJumpVertexTo_[vertex][jumpLen] =
@@ -140,7 +144,7 @@ void CondenseTree::initLcaJumps(size_t vertex, size_t parent, unsigned& timer) {
     }
 
     lcaJumpVertexTo_[to][0] = vertex;
-    initLcaJumps(to, vertex, timer);
+    buildLca(to, vertex, timer);
   }
 
   timeOut_[vertex] = timer;
@@ -150,42 +154,129 @@ class Graph {
  public:
   Graph(const std::vector<std::vector<size_t>> graph);
 
+  const std::vector<std::vector<size_t>>& getGraph() const;
   CondenseTree condense() const;
-
- private:
-  void findBridges(size_t vertex, size_t parent, std::vector<bool>& used,
-                   std::vector<unsigned>& timeIn, unsigned& timer,
-                   std::vector<unsigned>& minTimeUp,
-                   std::set<std::pair<size_t, size_t>>& bridges) const;
-
-  void condense(size_t vertex, size_t condGraphVertexId,
-                std::vector<size_t>& condGraphMapping, std::vector<bool>& used,
-                const std::set<std::pair<size_t, size_t>>& bridges) const;
 
  private:
   std::vector<std::vector<size_t>> graph_;
 };
 
-Graph::Graph(const std::vector<std::vector<size_t>> graph) : graph_(graph) {}
+class BridgeFinder {
+ public:
+  std::set<std::pair<size_t, size_t>> findBridges(const Graph* graph);
 
-void Graph::findBridges(size_t vertex, size_t parent, std::vector<bool>& used,
-                        std::vector<unsigned>& timeIn, unsigned& timer,
-                        std::vector<unsigned>& minTimeUp,
-                        std::set<std::pair<size_t, size_t>>& bridges) const {
-  used[vertex] = true;
-  minTimeUp[vertex] = timeIn[vertex] = timer++;
+ private:
+  void findBridges(size_t vertex, size_t parent,
+                   std::set<std::pair<size_t, size_t>>& bridges,
+                   unsigned& timer);
 
-  for (size_t to : graph_[vertex]) {
+ private:
+  const Graph* graph_;
+  std::vector<bool> used_;
+  std::vector<unsigned> timeIn_;
+  std::vector<unsigned> timeOut_;
+  std::vector<unsigned> minTimeUp_;
+};
+
+class GraphCondenser {
+ public:
+  void condense(const Graph* graph);
+
+  std::vector<size_t> getVertexMapping();
+  std::vector<Edge> getEdges();
+  size_t getCondGraphSize();
+
+ private:
+  void condense(size_t vertex);
+
+ private:
+  const Graph* graph_;
+
+  std::set<std::pair<size_t, size_t>> bridges_;
+  std::vector<Edge> edges_;
+  std::vector<size_t> vertexMapping_;
+  std::vector<bool> used_;
+  size_t condGraphSize_ = 0;
+};
+
+void GraphCondenser::condense(const Graph* graph) {
+  graph_ = graph;
+  bridges_ = BridgeFinder().findBridges(graph);
+
+  auto& vectorGraph = graph_->getGraph();
+  size_t graphSize = vectorGraph.size();
+  vertexMapping_.resize(graphSize);
+  used_.resize(graphSize, false);
+
+  for (size_t vertex = 0; vertex < vectorGraph.size(); ++vertex) {
+    if (!used_[vertex]) {
+      condense(vertex);
+      condGraphSize_++;
+    }
+  }
+
+  for (auto& edge : bridges_) {
+    if (edge.first < edge.second) {
+      edges_.push_back(
+          Edge{vertexMapping_[edge.first], vertexMapping_[edge.second]});
+    }
+  }
+}
+
+void GraphCondenser::condense(size_t vertex) {
+  used_[vertex] = true;
+  vertexMapping_[vertex] = condGraphSize_;
+
+  auto& graph = graph_->getGraph();
+  for (size_t to : graph[vertex]) {
+    if (bridges_.find({vertex, to}) != bridges_.end()) {
+      continue;
+    }
+
+    if (!used_[to]) {
+      condense(to);
+    }
+  }
+}
+
+std::vector<size_t> GraphCondenser::getVertexMapping() { return vertexMapping_; }
+std::vector<Edge> GraphCondenser::getEdges() { return edges_; }
+size_t GraphCondenser::getCondGraphSize() { return condGraphSize_; }
+
+std::set<std::pair<size_t, size_t>> BridgeFinder::findBridges(
+    const Graph* graph) {
+  graph_ = graph;
+  size_t graphSize = graph->getGraph().size();
+
+  used_.resize(graphSize, false);
+  timeIn_.resize(graphSize, 0);
+  timeOut_.resize(graphSize, 0);
+  minTimeUp_.resize(graphSize, 0);
+  std::set<std::pair<size_t, size_t>> bridges;
+  unsigned timer = 0;
+
+  findBridges(0, 0, bridges, timer);
+  return bridges;
+}
+
+void BridgeFinder::findBridges(size_t vertex, size_t parent,
+                               std::set<std::pair<size_t, size_t>>& bridges,
+                               unsigned& timer) {
+  used_[vertex] = true;
+  minTimeUp_[vertex] = timeIn_[vertex] = timer++;
+
+  auto& graph = graph_->getGraph();
+  for (size_t to : graph[vertex]) {
     if (to == parent) continue;
 
-    if (used[to])
-      minTimeUp[vertex] = std::min(minTimeUp[vertex], timeIn[to]);
+    if (used_[to])
+      minTimeUp_[vertex] = std::min(minTimeUp_[vertex], timeIn_[to]);
     else {
-      findBridges(to, vertex, used, timeIn, timer, minTimeUp, bridges);
+      findBridges(to, vertex, bridges, timer);
 
-      minTimeUp[vertex] = std::min(minTimeUp[to], minTimeUp[vertex]);
+      minTimeUp_[vertex] = std::min(minTimeUp_[to], minTimeUp_[vertex]);
 
-      if (minTimeUp[to] > timeIn[vertex]) {
+      if (minTimeUp_[to] > timeIn_[vertex]) {
         bridges.insert({vertex, to});
         bridges.insert({to, vertex});
       }
@@ -193,68 +284,26 @@ void Graph::findBridges(size_t vertex, size_t parent, std::vector<bool>& used,
   }
 }
 
-void Graph::condense(size_t vertex, size_t condGraphVertexId,
-                     std::vector<size_t>& condGraphMapping,
-                     std::vector<bool>& used,
-                     const std::set<std::pair<size_t, size_t>>& bridges) const {
-  used[vertex] = true;
-  condGraphMapping[vertex] = condGraphVertexId;
+Graph::Graph(const std::vector<std::vector<size_t>> graph) : graph_(graph) {}
 
-  for (size_t to : graph_[vertex]) {
-    if (bridges.find({vertex, to}) != bridges.end()) {
-      continue;
-    }
-
-    if (!used[to]) {
-      condense(to, condGraphVertexId, condGraphMapping, used, bridges);
-    }
-  }
+const std::vector<std::vector<size_t>>& Graph::getGraph() const {
+  return graph_;
 }
 
 CondenseTree Graph::condense() const {
-  static const unsigned inf = 1e9;
-  std::vector<bool> used(graph_.size(), false);
-  std::vector<unsigned> timeIn(graph_.size(), 0);
-  std::vector<unsigned> minTimeUp(graph_.size(), inf);
+  GraphCondenser condenser = GraphCondenser();
+  condenser.condense(this);
 
-  std::set<std::pair<size_t, size_t>> bridges;
-
-  unsigned timer = 0;
-
-  findBridges(0, 0, used, timeIn, timer, minTimeUp, bridges);
-
-  used.assign(graph_.size(), false);
-
-  std::vector<size_t> condGraphMapping(graph_.size());
-
-  size_t condGraphVertexId = 0;
-  for (size_t vertex = 0; vertex < graph_.size(); ++vertex) {
-    if (!used[vertex]) {
-      condense(vertex, condGraphVertexId, condGraphMapping, used, bridges);
-      condGraphVertexId++;
-    }
-  }
-
-  std::vector<Edge> edges;
-
-  for (auto& edge : bridges) {
-    if (edge.first < edge.second) {
-      edges.push_back(
-          Edge{condGraphMapping[edge.first], condGraphMapping[edge.second]});
-    }
-  }
-
-  return CondenseTree{condGraphVertexId, edges, condGraphMapping};
+  return CondenseTree{condenser.getCondGraphSize(), condenser.getEdges(),
+                      condenser.getVertexMapping()};
 }
 
-struct Input
-{
-    Graph graph;
-    size_t finalVertex;
+struct Input {
+  Graph graph;
+  size_t finalVertex;
 };
 
-Input readInput()
-{
+Input readInput() {
   size_t n = 0, m = 0;
   std::cin >> n >> m;
 
@@ -272,21 +321,21 @@ Input readInput()
     graph[v].push_back(u);
   }
 
-  return Input{ Graph(graph), f };
+  return Input{Graph(graph), f};
 }
 
-void proceedQueries(const Graph& graph, size_t finalVertex, size_t numberOfQueries)
-{
-    CondenseTree condenseTree = graph.condense();
+void proceedQueries(const Graph& graph, size_t finalVertex,
+                    size_t numberOfQueries) {
+  CondenseTree condenseTree = graph.condense();
+  
+  condenseTree.buildLca();
+  for (size_t query = 0; query < numberOfQueries; ++query) {
+    int u, v;
+    std::cin >> u >> v;
+    --u, --v;
 
-    for (size_t query = 0; query < numberOfQueries; ++query)
-    {
-        int u, v;
-        std::cin >> u >> v;
-        --u, --v;
-
-        std::cout << condenseTree.countSameEdgesOnWay(u, v, finalVertex) << "\n";
-    }
+    std::cout << condenseTree.countSameEdgesOnWay(u, v, finalVertex) << "\n";
+  }
 }
 
 int main() {
