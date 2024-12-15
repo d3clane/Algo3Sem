@@ -88,7 +88,7 @@ struct Spaceship {
   std::vector<size_t> virusStarts;
 };
 
-Spaceship readSpaceshipInfo() {
+void readSpaceshipInfo(Spaceship& spaceship) {
   size_t nVertexes, nEdges, nVirusStarts;
   std::cin >> nVertexes >> nEdges >> nVirusStarts;
 
@@ -112,8 +112,6 @@ Spaceship readSpaceshipInfo() {
 
   std::cin >> spaceship.start >> spaceship.end;
   --spaceship.start, --spaceship.end;
-
-  return spaceship;
 }
 
 int64_t findMinDistance(const Spaceship& spaceship) {
@@ -126,7 +124,9 @@ int64_t findMinDistance(const Spaceship& spaceship) {
 }
 
 int main() {
-  Spaceship spaceship = readSpaceshipInfo();
+  Spaceship spaceship;
+  readSpaceshipInfo(spaceship);
+
   std::cout << findMinDistance(spaceship) << std::endl;
 
   return 0;
